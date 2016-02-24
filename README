@@ -1,0 +1,24 @@
+# jira-report
+
+Export a list of completed tickets from Jira, with their start date, completion
+date, and estimate.
+
+The purpose is to allow proper velocity calculation (Jira's per-sprint
+calculation being insufficient, and unworkable in a Kanban-style process).
+
+### Installation
+
+Clone this repo.
+
+### Configuration
+
+    git config jira.user <username>
+    git config jira.password <password>
+    git config jira.site <url>
+
+### Usage
+
+    ./report.rb <project key>...
+
+Produces `report.csv`. Use your favourite spreadsheet tool from there.
+
