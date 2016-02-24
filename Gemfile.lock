@@ -1,0 +1,59 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    activesupport (4.2.5)
+      i18n (~> 0.7)
+      json (~> 1.7, >= 1.7.7)
+      minitest (~> 5.1)
+      thread_safe (~> 0.3, >= 0.3.4)
+      tzinfo (~> 1.1)
+    coderay (1.1.0)
+    colorize (0.7.7)
+    hashie (3.4.3)
+    http_logger (0.5.1)
+    httplog (0.3.0)
+      colorize
+    i18n (0.7.0)
+    jira-ruby (0.1.17)
+      activesupport
+      oauth (~> 0.4.7)
+    json (1.8.3)
+    method_source (0.8.2)
+    minitest (5.8.4)
+    net-http-persistent (2.9.4)
+    oauth (0.4.7)
+    pry (0.10.3)
+      coderay (~> 1.1.0)
+      method_source (~> 0.8.1)
+      slop (~> 3.4)
+    pry-nav (0.2.4)
+      pry (>= 0.9.10, < 0.11.0)
+    slop (3.6.0)
+    term-ansicolor (1.3.2)
+      tins (~> 1.0)
+    thread_safe (0.3.5)
+    tins (1.8.2)
+    tzinfo (1.2.2)
+      thread_safe (~> 0.1)
+    working_hours (1.1.2)
+      activesupport (>= 3.2)
+      tzinfo
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  activesupport (~> 4.2.0)
+  hashie
+  http_logger
+  httplog
+  i18n
+  jira-ruby
+  net-http-persistent
+  pry
+  pry-nav
+  term-ansicolor
+  working_hours
+
+BUNDLED WITH
+   1.11.2
