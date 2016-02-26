@@ -53,6 +53,10 @@ module JiraReport
       @issue.customfield_10008
     end
 
+    def labels
+      @issue.labels.join(',')
+    end
+
     private
 
     def status_timestamp(status)
@@ -112,7 +116,7 @@ module JiraReport
       end_date = Date.today
 
       csv = CSV.open('report.csv', 'w') do |csv|
-        csv << ['Project', 'Issue', 'User', 'Started At', 'Completed At', 'Week', 'Estimate', 'Duration']
+        csv << ['Project', 'Issue', 'User', 'Started At', 'Completed At', 'Week', 'Estimate', 'Duration', 'Labels']
 
         projects.each do |project|
           (start_date...end_date).each do |date|
@@ -133,7 +137,8 @@ module JiraReport
                 story.closed_at,
                 story.closed_at.beginning_of_week.to_date,
                 story.estimate.to_i,
-                story.started_at.working_time_until(story.closed_at)
+                story.started_at.working_time_until(story.closed_at),
+                story.labels
               ]
             end
           end
