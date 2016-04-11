@@ -16,12 +16,32 @@ require 'working_hours'
 Time.zone = 'UTC'
 
 module JiraReport
+
+  class StoryRepo
+    def initialize(client)
+      @_client = client
+      @_repo = {}
+    end
+
+    def find_by_key(ref)
+      @_repo[ref] ||= Story.new(@_client.Issue.jql("key = #{ref}", expand: %w[changelog]).first, self)
+    end
+
+    def search(date:, project:)
+      issues = @_client.Issue.jql('project = %s AND updated >= %s AND updated < %s' % [project, date, date+1], expand: %w[changelog])
+      issues.each do |issue|
+        story = @_repo[issue.key] = Story.new(issue, self)
+        yield story
+      end
+    end
+  end
   
   class Story
     attr_reader :errors
 
-    def initialize(jira_issue)
+    def initialize(jira_issue, repo)
       @issue = jira_issue
+      @repo = repo
     end
 
     def valid?
@@ -43,18 +63,47 @@ module JiraReport
       status_timestamp('Closed') || status_timestamp('Done')
     end
 
+    def closed?
+      !!closed_at
+    end
+
     def assignee
       @issue.assignee&.emailAddress
     end
 
+    # Return story estimate if leaf;
+    # If there is no estimate, fall back to a portion of the parent estimate.
+    # Tickets with subtasks have no estimate.
     def estimate
-      # For some weird reason, Jira estimates end up in this field instead of
-      # the "estimate" field.
-      @issue.customfield_10008
+      return if children.any?
+      return raw_estimate if raw_estimate.present?
+      return unless parent.present? && parent.raw_estimate
+      1.0 * parent.raw_estimate  / parent.children.length
+    end
+
+    # For some weird reason, Jira estimates end up in this field instead of
+    # the "estimate" field.
+    # (and calls it "story points", not "estimate", for subtasks)
+    def raw_estimate
+      @issue.customfield_10008&.to_f 
     end
 
     def labels
       @issue.labels.join(',')
+    end
+
+    def parent
+      parent_hash = @issue.try(:parent)
+      return unless parent_hash
+      @repo.find_by_key parent_hash['key']
+    end
+
+    def children
+      children_hashes = @issue.try(:subtasks)
+      return [] unless children_hashes
+      children_hashes.map { |h|
+        @repo.find_by_key h['key']
+      }
     end
 
     private
@@ -112,6 +161,8 @@ module JiraReport
     WEEK_COUNT = 156
 
     def report(projects)
+      binding.pry
+
       start_date = Date.parse('2016-01-01')
       end_date = Date.today
 
@@ -121,14 +172,14 @@ module JiraReport
         projects.each do |project|
           (start_date...end_date).each do |date|
             Logger.info("#{project} #{date}")
-            issues = client.Issue.jql('project = %s AND updated >= %s AND updated < %s' % [project, date, date+1], expand: %w[changelog])
-            issues.each do |issue|
-              story = Story.new(issue)
+
+            repo.search(project: project, date: date) do |story|
+              next unless story.closed?
               unless story.valid?
-                Logger.warning("  #{issue.key} invalid: #{story.errors}")
+                Logger.warning("  #{story.ref} invalid: #{story.errors}")
                 next
               end
-              Logger.info("  #{issue.key} valid: #{story.estimate.to_i} points")
+              Logger.info("  #{story.ref} valid: #{story.estimate} points")
               csv << [
                 project,
                 story.ref,
@@ -136,7 +187,7 @@ module JiraReport
                 story.started_at,
                 story.closed_at,
                 story.closed_at.beginning_of_week.to_date,
-                story.estimate.to_i,
+                story.estimate,
                 story.started_at.working_time_until(story.closed_at),
                 story.labels
               ]
@@ -151,6 +202,11 @@ module JiraReport
     Logger = Logger.new
 
     attr_reader :setup_complete
+
+
+    def repo
+      @_repo ||= StoryRepo.new(client)
+    end
 
     def client
       return @client if @client
